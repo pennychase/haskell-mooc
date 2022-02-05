@@ -1,4 +1,2 @@
-*~
-*.lock
-.stack-work
+dist*/
 score.json
