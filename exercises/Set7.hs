@@ -26,11 +26,11 @@ data Velocity = Velocity Double
 
 -- velocity computes a velocity given a distance and a time
 velocity :: Distance -> Time -> Velocity
-velocity = todo
+velocity (Distance d) (Time t) = Velocity (d / t)
 
 -- travel computes a distance given a velocity and a time
 travel :: Velocity -> Time -> Distance
-travel = todo
+travel (Velocity v) (Time t) = (Distance (v * t))
 
 ------------------------------------------------------------------------------
 -- Ex 2: let's implement a simple Set datatype. A Set is a list of
@@ -49,15 +49,18 @@ data Set a = Set [a]
 
 -- emptySet is a set with no elements
 emptySet :: Set a
-emptySet = todo
+emptySet = Set []
 
 -- member tests if an element is in a set
 member :: Eq a => a -> Set a -> Bool
-member = todo
+member e (Set s) = e `elem` s
 
 -- add a member to a set
-add :: a -> Set a -> Set a
-add = todo
+add :: Ord a => a -> Set a -> Set a
+add e (Set s) = if e `elem` rest then Set s else Set (first ++ (e:rest))
+  where
+    first = Prelude.takeWhile (< e) s
+    rest = Prelude.dropWhile (< e) s
 
 ------------------------------------------------------------------------------
 -- Ex 3: a state machine for baking a cake. The type Event represents
@@ -92,10 +95,19 @@ add = todo
 data Event = AddEggs | AddFlour | AddSugar | Mix | Bake
   deriving (Eq,Show)
 
-data State = Start | Error | Finished
+data State = Start | EggsAdded | SugarAdded | FlourAdded | AllIngredients | Mixed | Error | Finished
   deriving (Eq,Show)
 
-step = todo
+step :: State -> Event -> State
+step Start AddEggs = EggsAdded
+step EggsAdded AddFlour = FlourAdded
+step EggsAdded AddSugar = SugarAdded
+step FlourAdded AddSugar = AllIngredients
+step SugarAdded AddFlour = AllIngredients
+step AllIngredients Mix = Mixed
+step Mixed Bake = Finished
+step Finished  _ = Finished
+step _ _ = Error
 
 -- do not edit this
 bake :: [Event] -> State
@@ -113,13 +125,18 @@ bake events = go Start events
 --   average (1.0 :| [2.0,3.0])  ==>  2.0
 
 average :: Fractional a => NonEmpty a -> a
-average = todo
+average (n :| []) = n
+average xs = (Prelude.sum xs) / fromIntegral (Prelude.length xs)
+
 
 ------------------------------------------------------------------------------
 -- Ex 5: reverse a NonEmpty list.
 
 reverseNonEmpty :: NonEmpty a -> NonEmpty a
-reverseNonEmpty = todo
+reverseNonEmpty (x :| []) = (x :| [])
+reverseNonEmpty (x :| xs) = (y :| ys)
+  where
+    (y : ys) = Prelude.reverse xs ++ [x]
 
 ------------------------------------------------------------------------------
 -- Ex 6: implement Semigroup instances for the Distance, Time and
@@ -131,6 +148,14 @@ reverseNonEmpty = todo
 -- velocity (Distance 50 <> Distance 10) (Time 1 <> Time 2)
 --    ==> Velocity 20
 
+instance Semigroup Distance where
+  Distance d1 <> Distance d2 = Distance (d1 + d2)
+
+instance Semigroup Velocity where
+  Velocity v1 <> Velocity v2 = Velocity (v1 + v2)
+
+instance Semigroup Time where
+  Time t1 <> Time t2 = Time (t1 + t2)
 
 ------------------------------------------------------------------------------
 -- Ex 7: implement a Monoid instance for the Set type from exercise 2.
@@ -140,6 +165,11 @@ reverseNonEmpty = todo
 --
 -- What are the class constraints for the instances?
 
+instance Ord a => Semigroup (Set a) where
+  (Set xs) <> s = foldr add s xs
+
+instance Ord a => Monoid (Set a) where
+  mempty = emptySet
 
 ------------------------------------------------------------------------------
 -- Ex 8: below you'll find two different ways of representing
@@ -162,28 +192,41 @@ reverseNonEmpty = todo
 
 data Operation1 = Add1 Int Int
                 | Subtract1 Int Int
+                | Multiply1 Int Int
   deriving Show
 
 compute1 :: Operation1 -> Int
 compute1 (Add1 i j) = i+j
 compute1 (Subtract1 i j) = i-j
+compute1 (Multiply1 i j) = i*j
 
 show1 :: Operation1 -> String
-show1 = todo
+show1 (Add1 i j) = show i ++ "+" ++ show j
+show1 (Subtract1 i j) = show i ++ "-" ++ show j
+show1 (Multiply1 i j) = show i ++ "*" ++ show j
 
 data Add2 = Add2 Int Int
   deriving Show
 data Subtract2 = Subtract2 Int Int
   deriving Show
+data Multiply2 = Multiply2 Int Int
+  deriving Show
 
 class Operation2 op where
   compute2 :: op -> Int
+  show2 :: op -> String 
 
 instance Operation2 Add2 where
   compute2 (Add2 i j) = i+j
+  show2 (Add2 i j) = show i ++ "+" ++ show j
 
 instance Operation2 Subtract2 where
   compute2 (Subtract2 i j) = i-j
+  show2 (Subtract2 i j) = show i ++ "-" ++ show j
+
+instance Operation2 Multiply2 where
+  compute2 (Multiply2 i j) = i*j
+  show2 (Multiply2 i j) = show i ++ "*" ++ show j
 
 
 ------------------------------------------------------------------------------
@@ -213,7 +256,14 @@ data PasswordRequirement =
   deriving Show
 
 passwordAllowed :: String -> PasswordRequirement -> Bool
-passwordAllowed = todo
+passwordAllowed pwd req =
+  case req of
+    MinimumLength n -> Prelude.length pwd >= n
+    ContainsSome chars-> not . null $ Data.List.intersect pwd chars
+    DoesNotContain chars-> null (Data.List.intersect pwd chars)
+    And req1 req2-> passwordAllowed pwd req1 && passwordAllowed pwd req2
+    Or req1 req2-> passwordAllowed pwd req1 || passwordAllowed pwd req2
+
 
 ------------------------------------------------------------------------------
 -- Ex 10: a DSL for simple arithmetic expressions with addition and
@@ -235,17 +285,31 @@ passwordAllowed = todo
 --     ==> "(3*(1+1))"
 --
 
-data Arithmetic = Todo
+data Arithmetic = 
+    Literal Int 
+  | Add Arithmetic Arithmetic 
+  | Multiply Arithmetic Arithmetic
   deriving Show
 
 literal :: Integer -> Arithmetic
-literal = todo
+literal n = Literal (fromIntegral n)
 
 operation :: String -> Arithmetic -> Arithmetic -> Arithmetic
-operation = todo
+operation op arg1 arg2 = 
+  case op of 
+    "+" -> Add arg1 arg2
+    "*" -> Multiply arg1 arg2
 
 evaluate :: Arithmetic -> Integer
-evaluate = todo
+evaluate expr = 
+  case expr of
+    Literal n -> fromIntegral n
+    Add expr1 expr2 -> evaluate expr1 + evaluate expr2
+    Multiply expr1 expr2 -> evaluate expr1 * evaluate expr2
 
 render :: Arithmetic -> String
-render = todo
+render expr = 
+  case expr of
+    Literal n -> show n
+    Add expr1 expr2 -> "(" ++ render expr1 ++ "+" ++ render expr2 ++ ")"
+    Multiply expr1 expr2 -> "(" ++ render expr1 ++ "*" ++ render expr2 ++ ")"
