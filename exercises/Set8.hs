@@ -240,8 +240,8 @@ exampleCircle = fill red (circle 80 100 200)
 rectangle :: Int -> Int -> Int -> Int -> Shape
 rectangle x0 y0 w h = Shape f
   where
-    f (Coord x y) = x0 <= x && x <= (x0 + w - 1) 
-                 && y0 <= y && y <= (y0 + h - 1)
+    f (Coord x y) = x0 <= x && x < (x0 + w) 
+                 && y0 <= y && y < (y0 + h)
 ------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
