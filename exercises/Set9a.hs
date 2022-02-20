@@ -210,15 +210,12 @@ instance Eq Text where
 
 compose :: (Eq a, Eq b) => [(a,b)] -> [(b,c)] -> [(a,c)]
 compose fs gs = 
-  filterNothing xs (map (`lookup` gs) fxs)
+  concatMap apply fs 
   where
-    (xs, fxs) = unzip fs
-    filterNothing [] _ = []
-    filterNothing (x:xs) (y:ys) =
-      case y of
-        Nothing -> filterNothing xs ys
-        Just y' -> (x,y') : filterNothing xs ys
-
+    apply xs =
+      case lookup (snd xs) gs of
+        Nothing -> []
+        Just y -> [(fst xs, y)]
 
 ------------------------------------------------------------------------------
 -- Ex 9: Reorder a list using a list of indices.
@@ -262,4 +259,4 @@ multiply :: Permutation -> Permutation -> Permutation
 multiply p q = map (\i -> p !! (q !! i)) (identity (length p))
 
 permute :: Permutation -> [a] -> [a]
-permute perm lis = map fst . sortBy (comparing snd) $ zip lis perm
+permute perm lis = map snd . sortBy (comparing fst) $ zip perm lis
