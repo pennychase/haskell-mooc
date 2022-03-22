@@ -58,7 +58,9 @@ greet2 = getLine >>= greet
 --   ["alice","bob","carl"]
 
 readWords :: Int -> IO [String]
-readWords n = todo
+readWords n = do
+    ws <- replicateM n getLine
+    return $ sort ws
 
 ------------------------------------------------------------------------------
 -- Ex 5: define the IO operation readUntil f, which reads lines from
@@ -75,13 +77,23 @@ readWords n = todo
 --   ["bananas","garlic","pakchoi"]
 
 readUntil :: (String -> Bool) -> IO [String]
-readUntil f = todo
+readUntil f = do
+    xs <- loop []
+    return $ reverse xs
+    where
+        loop acc = do
+            x <- getLine
+            if f x
+                then return acc
+                else loop (x : acc)
+
+
 
 ------------------------------------------------------------------------------
 -- Ex 6: given n, print the numbers from n to 0, one per line
 
 countdownPrint :: Int -> IO ()
-countdownPrint n = todo
+countdownPrint n = mapM_ print [n, n - 1 .. 0]
 
 ------------------------------------------------------------------------------
 -- Ex 7: isums n should read n numbers from the user (one per line) and
@@ -96,7 +108,17 @@ countdownPrint n = todo
 --   5. produces 9
 
 isums :: Int -> IO Int
-isums n = todo
+isums n = do
+    isums' n 0
+    where
+        isums' i acc = do
+            l <- getLine
+            let n = (read l :: Int)
+            let acc' = acc + n
+            print acc'
+            if (i /= 1) 
+                then isums' (i - 1) acc'
+                else return acc'
 
 ------------------------------------------------------------------------------
 -- Ex 8: when is a useful function, but its first argument has type
@@ -104,7 +126,7 @@ isums n = todo
 -- argument has type IO Bool.
 
 whenM :: IO Bool -> IO () -> IO ()
-whenM cond op = todo
+whenM cond op = cond >>= (\b -> when b op)
 
 ------------------------------------------------------------------------------
 -- Ex 9: implement the while loop. while condition operation should
@@ -124,7 +146,12 @@ ask = do putStrLn "Y/N?"
          return $ line == "Y"
 
 while :: IO Bool -> IO () -> IO ()
-while cond op = todo
+while cond op = 
+    whenM cond loop
+    where
+        loop = do
+            op
+            while cond op
 
 ------------------------------------------------------------------------------
 -- Ex 10: given a string and an IO operation, print the string, run
@@ -144,4 +171,8 @@ while cond op = todo
 --     4. returns the line read from the user
 
 debug :: String -> IO a -> IO a
-debug s op = todo
+debug s op = do
+    putStrLn s
+    res <- op
+    putStrLn s
+    return res
